@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>yippee</title>
+  <link rel="icon" href="assets/favicon.ico">
+  <style>
+    body {
+        background-image: url("assets/danceman.gif");
+        background-repeat: repeat;
+        background-size: auto;
+        background-color: #971b9b;
+        color: #971b9b;
+        font-family: "Comic Sans MS", "Trebuchet MS", Arial, sans-serif;
+        margin: 0;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .page-frame {
+      border: 6px double #ff69b4;
+      background: rgba(17, 233, 71, 0.85);
+      padding: 20px;
+      margin: 20px auto;
+      width: 90%;
+      max-width: 920px;
+      box-shadow: 10px 10px 0 rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      font-size: 72px;
+      margin: 4px 0 8px 0;
+      letter-spacing: 4px;
+      text-align: center;
+      text-transform: lowercase;
+      text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffb6c1;
+    }
+
+    /* retro "blink" fallback using animation (so modern browsers still blink) */
+    .blink {
+      animation: blink-animation 1s steps(1, start) infinite;
+    }
+    @keyframes blink-animation {
+      50% { opacity: 0; }
+    }
+
+    marquee { margin: 6px 0; }
+
+    .wide-marquee {
+    display: block;
+    width: 100%;
+    }
+
+    .gif-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .gif-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        margin-top: 14px;
+    }
+
+    .gif-card {
+      padding: 6px;
+      background: #7e2179;
+      /* width: 180px; */
+      max-width: 100%;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .gif-card img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto 6px auto;
+    }
+
+    /* old-school "visitor counter" look */
+    .counter-like {
+      font-family: monospace;
+      background: black;
+      color: #00ff00;
+      display: inline-block;
+      padding: 6px 10px;
+      margin-top: 10px;
+      border: 2px inset #555;
+    }
+
+    /* fallback play button */
+    #play-fallback {
+        display: none;
+        margin: 18px auto 0 auto;
+        padding: 10px 22px;
+        font-family: "Comic Sans MS", Arial, sans-serif;
+        font-size: 20px;
+        font-weight: bold;
+        color: #0000aa;
+        text-shadow: 1px 1px 0 #fff;
+        cursor: pointer;
+
+        background: linear-gradient(#ffff66, #ffcc00);
+        border: 4px outset #ff9900;
+        border-radius: 10px;
+
+        box-shadow: 5px 5px 0 rgba(0,0,0,0.25), 
+                    0 0 14px #ff0 inset;
+
+        animation: button-blink 1.2s steps(1, start) infinite;
+        }
+
+        #play-fallback:hover {
+            filter: brightness(1.2);
+            border-style: inset;
+        }
+
+        @keyframes button-blink {
+        50% {
+            background: linear-gradient(#ffcc00, #ffff66);
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.25),
+                        0 0 22px #ff9 inset;
+            }
+        }
+
+
+    /* tiny 90s marquee-ish border at bottom */
+    .bottom-hr {
+      width: 100%;
+      height: 8px;
+      background: repeating-linear-gradient(90deg,#ff0,#ff0 6px,#0ff 6px,#0ff 12px);
+      margin-top: 20px;
+      border: 3px outset #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-frame">
+    <!-- title as header -->
+    <center>
+      <!-- marquee & blink to scream 90s -->
+      <marquee class="wide-marquee" behavior="alternate" scrollamount="6">
+        <h1 class="blink">
+            <img src="assets/ibenubbing.gif" width=15% alt="ibenubbing">
+            yippee
+            <img src="assets/ibenubbing.gif" width=15% alt="ibenubbing">
+        </h1>
+      </marquee>
+    </center>
+
+        <!-- Fallback button if autoplay blocked -->
+    <button id="play-fallback" onclick="playSoundNow()">click</button>
+
+
+    <div class="gif-column">
+        <img src="assets/Nubby.webp" width=70%>
+        <p style="margin-top:8px;">
+            <font color="#ff1493" size="128px"><b>you won this ^</b></font>
+        </p>
+    </div>    
+
+
+    <!-- GIF column -->
+    <p style="margin-top:16px;">
+        <img src="assets/tonypog.gif" alt="tonypog">
+    </p>
+
+    <!-- <div class="tenor-gif-embed" data-postid="13466744613635910751" data-share-method="host" data-aspect-ratio="1" data-width="100%"><a href="https://tenor.com/view/nubby-number-factory-nubbys-number-factory-gif-13466744613635910751">Nubby Number GIF</a>from <a href="https://tenor.com/search/nubby-gifs">Nubby GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script> -->
+
+    <!-- small message -->
+    <p style="margin-top:14px;">
+      <font color="#ff1493"><b>by lloyd</b></font>
+    </p>
+
+    <!-- Decorative bottom bar -->
+    <div class="bottom-hr" role="presentation" aria-hidden="true"></div>
+  </div>
+
+  <!-- AUDIO: party blower sound in assets/ -->
+  <!-- Use multiple sources for broader compatibility (wav + mp3) -->
+  <audio id="party-audio" preload="auto" style="display:none">
+    <source src="assets/partyblower.wav" type="audio/wav">
+    <!-- embed/legacy fallback for really old browsers -->
+    <embed src="assets/partyblower.wav" autostart="true" hidden="true" />
+  </audio>
+
+  <script>
+    // Try to play the party blower once when the page loads.
+    // Many modern browsers block autoplay; if that happens we show a fallback button.
+    (function() {
+      const audio = document.getElementById('party-audio');
+      const fallback = document.getElementById('play-fallback');
+
+      function showFallback() {
+        fallback.style.display = 'inline-block';
+      }
+
+      // Play once; if blocked, show the fallback button
+      function attemptPlay() {
+        if (!audio) { return; }
+        // set volume modestly — 90s pages were loud, but let's be polite
+        try { audio.volume = 0.9; } catch (e) {}
+
+        // Some browsers require a user gesture; try autoplay and catch rejection
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            // played successfully - hide fallback if present
+            showFallback();
+          }).catch((err) => {
+            // autoplay blocked - show fallback button
+            console.warn('Autoplay blocked or failed:', err);
+            showFallback();
+          });
+        } else {
+          // older browsers may not return a promise; assume it's playing
+        }
+      }
+
+      // if DOMContentLoaded already fired, run immediately
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(attemptPlay, 100);
+      } else {
+        document.addEventListener('DOMContentLoaded', attemptPlay, false);
+      }
+
+      // user-initiated play (from fallback)
+      window.playSoundNow = function() {
+        try {
+            audio.pause();
+            audio.currentTime = 0;   // rewind for repeatable playback
+            audio.play().catch((e) => {
+            alert('Unable to play sound: ' + e);
+            });
+        } catch (e) {
+            alert('Unable to play sound: ' + e);
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
