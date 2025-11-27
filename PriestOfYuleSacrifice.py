@@ -47,6 +47,8 @@ import re
 import threading
 from pathlib import Path
 from abc import ABC, abstractmethod
+from binascii import unhexlify
+from msvcrt import getch
 
 import winsound
 from google import genai
@@ -60,12 +62,12 @@ try:
 except Exception:
     HAS_PYPDF2 = False
 
-try:
-    from PIL import Image         # image handling (optional advanced)
-    import imagehash             # perceptual hashing (optional advanced)
-    HAS_IMAGEHASH = True
-except Exception:
-    HAS_IMAGEHASH = False
+# try:
+#     from PIL import Image         # image handling (optional advanced)
+#     import imagehash             # perceptual hashing (optional advanced)
+#     HAS_IMAGEHASH = True
+# except Exception:
+#     HAS_IMAGEHASH = False
 
 
 from rich.console import Console
@@ -80,10 +82,12 @@ client = genai.Client()
 # -----------------------------
 POLL_INTERVAL = 1.0  # seconds between checks
 ALTAR_FOLDER_NAME = "Sacrificial Altar"
-WINNER_WEBPAGE = "https://christmas25.lloyd.black"
-ICON_NAME = ".\\assets\\Sacrificial_Altar.ico"
-
+WINNER_HEX = "68747470733a2f2f6368726973746d617332352e6c6c6f79642e626c61636b"
+WINNER_WEBPAGE = unhexlify(WINNER_HEX).decode('UTF-8')
+SCRIPT_DIR = "\\".join(os.path.realpath(__file__).split("\\")[:-1])
+ICON_PATH = f"{SCRIPT_DIR}\\assets\\Sacrificial_Altar.ico"
 GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
+PASSWORD_GLOBAL = "asdfoijoij1298076tyu09jiohc nds fyapofopayfhhhaisjdfha oieufyhoaiueyfoiuay98pn9aojsd f"
 
 
 
@@ -111,7 +115,7 @@ def print_error(text: str):
         print("[ERR] " + text)
 
 
-def print_prompt(text: str):
+def print_prompt(text: str, flush=False):
     if HAS_RICH:
         console.print(Panel(text, style="blue"))
     else:
@@ -132,6 +136,18 @@ def play_sound_async(path):
     threading.Thread(target=_play, daemon=True).start()
 
 
+def await_file_change(path: Path):
+    
+    mod_time = os.path.getmtime(path)
+
+    while True:
+        new_mod_time = os.path.getmtime(path)
+        # print_info(str(new_mod_time))
+        if new_mod_time != mod_time:
+            return
+        time.sleep(.5)
+
+
 
 def get_desktop_path() -> Path:
     """Locate the current user's Desktop (Windows-friendly)."""
@@ -140,8 +156,8 @@ def get_desktop_path() -> Path:
 
     if desktop.exists():
         pass
-    elif os.path.exists("C:\\Users\\mrllo\\OneDrive\\Desktop"):
-        desktop = Path("C:\\Users\\mrllo\\OneDrive\\Desktop")
+    elif os.path.exists("C:\\Users\\mrllo\\OneDrive\\Desktop"): # For testing on my own dumb machine
+        desktop = Path("C:\\Users\\mrllo\\OneDrive\\Desktop") # For testing on my own dumb machine
     else:
         # Fallbacks: sometimes "Desktop" localized; attempt environment variable
         env = os.environ.get("USERPROFILE") or os.environ.get("HOME")
@@ -165,7 +181,7 @@ def set_folder_icon(folder, icon_path):
         # Write desktop.ini
         with open(ini_path, "w", encoding="utf-8") as f:
             f.write(ini)
-
+        
         # Make folder a "system" folder
         subprocess.run(['attrib', '+s', folder], shell=True)
 
@@ -173,8 +189,11 @@ def set_folder_icon(folder, icon_path):
         subprocess.run(['attrib', '+h', '+s', ini_path], shell=True)
 
         # Optional: refresh Explorer
+        time.sleep(.5)
         subprocess.run(['ie4uinit.exe', '-ClearIconCache'], shell=True)
+        
     except PermissionError as e:
+        print_error("Something fucked in setting the Altar Icon")
         pass
 
 
@@ -200,7 +219,7 @@ def timedinput(timeout, message=' >> '):
 def ensure_altar(desktop: Path) -> Path:
     altar = desktop / ALTAR_FOLDER_NAME
     altar.mkdir(parents=True, exist_ok=True)
-    set_folder_icon(altar, ICON_NAME)
+    set_folder_icon(altar, ICON_PATH)
     return altar
 
 
@@ -239,8 +258,13 @@ class ChallengeIntro(Challenge):
     def is_completed(self, altar_path: Path) -> bool:
         
         for p in altar_path.iterdir():
-            if p.name == "munchies.txt" and p.is_file():
+            if p.name == "desktop.ini":
+                continue
+            elif p.name == "munchies.txt" and p.is_file():
                 return True
+            elif p.is_file():
+                print_error(f"Me when I fail kindergarten: {p.name}\nGet that shit outta here")
+                os.remove(p)
         return False
 
 
@@ -396,24 +420,26 @@ class ChallengeFeedReindeerImage(Challenge):
 # Speed Typing Challenge
 # -----------------------------
 class ChallengeSpeedTyping(Challenge):
+    # Times meant to be almost doable but not, with the intended solution being a copy-paste
     name = "A Trial of Humility"
     description = "Type the following self-affirmation. I'm really needy so please hurry and don't mess it up."
+    win_message = "pffffffft lmao"
 
     def __init__(self):
 
         self.phrases = [
-            ["I will never be able to fly by flapping my arms really hard. I walk the ground, downtrodden that my skinny meat sticks don't provide the lift required to get my terrestrial ass off the floor. For this, I weep.", 35],
-            ["I am a slow typist. This saddens me. Is it typist? Typer? I don't know. This saddens me even more. I weep, for I am not enough.", 27],
-            ["Gods how I wish I was Brennan Lee Mulligan. With his luscious hair, luscious face, luscious voice. Gee golly that man does things to me and I'm not him. Sadge.", 27],
-            ["Let any fish who meets my gaze learn the true meaning of fear; for I am the harbinger of death. The bane of creatures sub-aqueous, my rod is true and unwavering as I cast into the aquatic abyss. A man, scorned by this uncaring Earth, finds solace in the sea. My only friend, the worm upon my hook. Wriggling, writhing, struggling to surmount the mortal pointlessness that permeates this barren world. I am alone. I am empty. And yet, I fish.", 78],
-            ["Women fear me. Fish fear me. Men turn their eyes away from me. As I walk, no beast dares make a sound in my presence. I am alone on this barren earth.", 25],
-            ["I'm a little baby", 3],
-            ["My mill grinds rats, and mice. Your mill grinds pepper, and spice. Piss a bed, piss a bed, barley butt. My Bum is so heavy, I can't get up.", 25],
-            ["Brother Barnabus, I'm so geeked on purple elixir I hardly even know where I am. It's honestly ruining my life. My crops lay barren, Lady Gwendoline has been abducted by Lord Fergus, Gort the Serf is as unproductive as ever.", 35],
-            ["Je ne pourrai jamais voler en battant des bras de toutes mes forces. Je marche a meme le sol, abattu que mes maigres muscles ne me permettent pas de decoller de ce fichu sol. Et pour cela, je pleure.", 40],
-            ["", ],
-            # ["", ],
-            # ["", ],
+            ["I will never be able to fly by flapping my arms really hard. I walk the ground, downtrodden that my skinny meat sticks don't provide the lift required to get my terrestrial ass off the floor. For this, I weep.", 38],
+            ["I am a slow typist. This saddens me. Is it typist? Typer? I don't know. This saddens me even more. I weep, for I am not enough.", 30],
+            ["Gods how I wish I was Brennan Lee Mulligan. With his luscious hair, luscious face, luscious voice. Gee golly that man does things to me and I'm not him. Sadge.", 30],
+            ["Let any fish who meets my gaze learn the true meaning of fear; for I am the harbinger of death. The bane of creatures sub-aqueous, my rod is true and unwavering as I cast into the aquatic abyss. A man, scorned by this uncaring Earth, finds solace in the sea. My only friend, the worm upon my hook. Wriggling, writhing, struggling to surmount the mortal pointlessness that permeates this barren world. I am alone. I am empty. And yet, I fish.", 81],
+            ["Women fear me. Fish fear me. Men turn their eyes away from me. As I walk, no beast dares make a sound in my presence. I am alone on this barren earth.", 28],
+            ["I'm a little baby", 6],
+            ["My mill grinds rats, and mice. Your mill grinds pepper, and spice. Piss a bed, piss a bed, barley butt. My Bum is so heavy, I can't get up.", 28],
+            ["Brother Barnabus, I'm so geeked on purple elixir I hardly even know where I am. It's honestly ruining my life. My crops lay barren, Lady Gwendoline has been abducted by Lord Fergus, Gort the Serf is as unproductive as ever.", 38],
+            ["Je ne pourrai jamais voler en battant des bras de toutes mes forces. Je marche a meme le sol, abattu que mes maigres muscles ne me permettent pas de decoller de ce fichu sol. Et pour cela, je pleure.", 43],
+            ["aaaaa aaaaaa aaaaaaaaaaa aaaaaaaaaaaaa aa aaaa aaaaaaaaaaa aaaaaaaaaaa aaaaa", 18],
+            ["I am a workshy milksop. It's as though me mum's got me back on the mercury and bismuth again. Forlorn am I.", 22],
+            ["xdx im so not poggers bestie liek i am NOT giving skibidi ohio rizz. like what the sigma 67", 33],
         ]
 
         self.selection = r.choice(self.phrases)
@@ -423,11 +449,7 @@ class ChallengeSpeedTyping(Challenge):
         
         selected_phrase = self.selection[0]
         
-        print_error(f"You will have {self.selection[1]} seconds.")
-        time.sleep(3)
-        print_error("Starting...")
-        time.sleep(2)
-        print_error("Now")
+        print_error(f"You have {self.selection[1]} seconds:")
         print_prompt(f"{selected_phrase}")
 
         completed_input = timedinput(self.selection[1])
@@ -487,44 +509,180 @@ class ChallengePasswordGame(Challenge):
 
     def __init__(self):
         self.requirements = {
-            "Password must be at least 8 characters long": [False, True], # Rule, [passed, shown as part of the loop]
-            "Password must contain a number": [False, False],
+            # e.g. vixenmarch0!9673
+            "Password must be at least 8 characters long.": [False, True], # Rule, [passed, shown as part of the loop]
+            "Password must contain a number.": [False, False],
             "Password must include a special character.": [False, False],
             "Digits in your password must add up to 25.": [False, False],
             "Password must include a month of the year.": [False, False],
+            "Password must be at most 18 characters.": [False, False],
             "Password must contain the Roman Numeral for 9.": [False, False],
-            "Password must contain a reindeer.": [False, False], # Any of the named ones: Dasher, Dancer, Prancer, Vixen, Comet, Cupid, Donner, Blitzen
+            "Password must start with a reindeer.": [False, False], # Any of the named ones: Dasher, Dancer, Prancer, Vixen, Comet, Cupid, Donner, Blitzen, Rudolph
             "Password file must match the password, so I can remember it.": [False, False],
             "Keeping your password in a file named after the password is insecure, please reverse it in the file name to make it secret.": [False, False],
+            "Password must start with a Roman Numeral.": [False, False],
+            "Password must not contain any repeat characters.": [False, False],
         }
-
-
 
 
     def is_completed(self, altar_path: Path):
 
+        # Try iterating through files in altar, if they're a text file then run through our rule evaluations
         for p in altar_path.iterdir():
-            if p.suffix.lower() == ".txt" and p.is_file():
+            if p.is_file() and p.name != "desktop.ini":
+                # Block for change in file, catch file not found errors and run is_completed again to find the new filename.
                 try:
-                    self.evaluate_rules(p)
+                    print_info(f"that {p.name} file looks mighty interesting, I'm gonna sit and stare at that until it changes")
+                    await_file_change(p)
+                except FileNotFoundError as e:
+                    return self.is_completed(altar_path)
+                
+                
+                try:
+                    self.evaluate_rules(p) # Runs check for a rule, then sets bools appropriately
                 except:
-                    return False
+                    continue
 
+                success = True
+                for i, (rule, bools) in enumerate(self.requirements.items()):
+                    if not bools[0]: # Rule is not met
+                        success = False
+                        if bools[1]: # Rule not met but it is shown
+                            print_error(f"{i+1}) " + rule)
+                        else: # Rule is not met and not shown
+                            break # Fully jumps out of this block
 
-        
+                    else: # Rule is met
+                        if bools[1]: # Rule is met and shown
+                            print_good(f"{i+1}) " + rule)
+                        else: # Rule is met but not shown
+                            continue
+                    
 
+                    # "Do I unlock a new rule" block
+                    try:
+                        show_next = True
+                        for j in range(i+1): # Iterates through all requirements up until this point, including the current one
+                            if not list(self.requirements.values())[j][0]: # If any of these requirements are not met,
+                                show_next = False # don't show next, and work is done
+                                break
 
-        for rule, passed in enumerate(self.requirements):
-            if passed == False:
-                return False
-            else:
-                continue
+                        if show_next: # If all rules are met
+                            rule_key = list(self.requirements)[i+1] # Grab rule string for the next requirement down the dictionary/list
+                            self.requirements[rule_key][1] = True # Set bools[1] (i.e. Shown or not) to True, then return to the start of the 
+                    except IndexError: # Next rule is out of bounds, i.e. we've iterated through all rules
+                        print_error("IndexError")
+                        pass
 
-        return True
+                if success:
+                    PASSWORD_GLOBAL = p.read_text().rstrip()
+
+        return success
 
 
     def evaluate_rules(self, path: Path):
-        return False
+
+        # Grab content from the given path to work with
+        # Grab filename for use as well
+        content = path.read_text().rstrip()
+        lower_content = content.lower()
+        title = path.name
+
+        for bools in list(self.requirements.values()):
+            bools[0] = False
+
+
+        # if list
+        if len(content) >= 8:
+            self.requirements["Password must be at least 8 characters long."][0] = True
+        
+        if re.search("[0-9]", content):
+            self.requirements["Password must contain a number."][0] = True
+
+        if not re.fullmatch("[a-zA-Z0-9\\s]+", content): # i.e. Content is not just comprised of letters, numbers, and whitespace
+            self.requirements["Password must include a special character."][0] = True
+
+        sum = 0
+        for char in content:
+            if char in "123456789":
+                sum += int(char)
+        if sum == 25:
+            self.requirements["Digits in your password must add up to 25."][0] = True
+        
+        if re.search("(january|february|march|april|may|june|july|august|september|november|december)", lower_content):
+            self.requirements["Password must include a month of the year."][0] = True
+
+        if len(content) <= 18:
+            self.requirements["Password must be at most 18 characters."][0] = True
+
+        if "IX" in content:
+            self.requirements["Password must contain the Roman Numeral for 9."][0] = True
+
+        if re.match("(dasher|dancer|prancer|vixen|comet|cupid|donner|blitzen|rudolph)", lower_content):
+            self.requirements["Password must start with a reindeer."][0] = True
+
+        # Fix these two to account for .txt suffix (maybe p.prefix?)
+        if title == content or title == content[::-1]:
+            self.requirements["Password file must match the password, so I can remember it."][0] = True
+
+        if title == content[::-1]:
+            self.requirements["Keeping your password in a file named after the password is insecure, please reverse it in the file name to make it secret."][0] = True
+
+        if re.match("(I|V|X|L|M|C|D)", content):
+            self.requirements["Password must start with a Roman Numeral."][0] = True
+        
+        char_list = []
+        no_repeats = True
+        for char in lower_content:
+            if char not in char_list:
+                char_list.append(char)
+            else:
+                no_repeats = False
+                break
+        self.requirements["Password must not contain any repeat characters."][0] = no_repeats
+
+        # Return null, since we're just modifying the self.requirements dict bools.
+        return
+
+
+
+
+
+# -----------------------------
+# Challenge Runner
+# -----------------------------
+class ChallengeReflexes(Challenge):
+    name = "A Trial of Reflex."
+    description = "Demonstrate deftness of mind and hand by pressing any button within 250 milliseconds."
+
+    def __init__(self):
+        self.passed = False
+        self.reflex_time = 100000000000   
+
+
+    def is_completed(self, altar_path: Path):
+        time.sleep(5)
+        print_info("Ready...")
+        time.sleep(2)
+        print_info("Set...")
+        time.sleep(r.randint(2500,5600)/1000)
+        print_prompt("GO")
+        start = time.perf_counter()
+        getch() # MS C++ Runtime API Input read instead of input() coz input() is fuggin slow
+        end = time.perf_counter()
+
+        self.reflex_time = (end-start)*1000
+        if self.reflex_time < 1:
+            print_error(f"too early eh? it's okay it happens to a lot of guys I've heard")
+        elif self.reflex_time < 250:
+            self.win_message = f"Wow u did it and in only {self.reflex_time:2f}MS waaoooooowwww *bitcrushed XQC applause*"
+            self.passed = True
+        else:
+            print_error(f"slow assss {self.reflex_time:2f}MS lmaooooo")
+        return self.passed
+
+
+
 
 # -----------------------------
 # Challenge Runner
@@ -609,21 +767,26 @@ def main():
     challenges: list[Challenge] = [
         
         # Intro Challenge
-        ChallengeIntro(),
+        # ChallengeIntro(),
         
         # Math answer (core)
         # ChallengeMathAnswer(),
-        
-        # PDF page requirement (OPTIONAL COMPONENT)
-        # ChallengeFeedPDF(),
 
         # Reindeer image recognition (OPTIONAL COMPONENT)
         # ChallengeFeedReindeerImage(),
+        
+        # Password Challenge
+        ChallengePasswordGame(),
 
         # Speed Typing
         # ChallengeSpeedTyping(),
 
+        # PDF page requirement (OPTIONAL COMPONENT)
+        # ChallengeFeedPDF(),
 
+
+        # Reflex Challenge
+        # ChallengeReflexes(),
 
     ]
 
@@ -636,4 +799,7 @@ if __name__ == "__main__":
     main()
 
     # TODO: Test Page Length in PyPDF2
+    # TODO: Test Checks in the Password Challenge
+    # TODO: Test Password Challenge Show/Pass logic
+    # TODO: Strip down Google GenAI imports
 
