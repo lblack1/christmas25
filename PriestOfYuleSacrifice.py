@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# region Comments and Imports
 """
 Christmas CLI Challenge Game - Extensible Skeleton
 
@@ -75,10 +76,10 @@ from rich.panel import Panel
 HAS_RICH = True
 console = Console()
 
-client = genai.Client()
+# endregion
 
 # -----------------------------
-# Configuration / Constants
+# region Configuration / Constants
 # -----------------------------
 POLL_INTERVAL = 1.0  # seconds between checks
 ALTAR_FOLDER_NAME = "Sacrificial Altar"
@@ -86,13 +87,11 @@ WINNER_HEX = "68747470733a2f2f6368726973746d617332352e6c6c6f79642e626c61636b"
 WINNER_WEBPAGE = unhexlify(WINNER_HEX).decode('UTF-8')
 SCRIPT_DIR = "\\".join(os.path.realpath(__file__).split("\\")[:-1])
 ICON_PATH = f"{SCRIPT_DIR}\\assets\\Sacrificial_Altar.ico"
-GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
-PASSWORD_GLOBAL = "asdfoijoij1298076tyu09jiohc nds fyapofopayfhhhaisjdfha oieufyhoaiueyfoiuay98pn9aojsd f"
-
-
+GOOGLE_API_KEY = "AIzaSyArlI99Ivrw8b9aHXnCal8KNAj-RrnSKiE"
+# endregion
 
 # -----------------------------
-# Helper utilities
+# region Helper utilities
 # -----------------------------
 def print_good(text: str):
     if HAS_RICH:
@@ -120,6 +119,71 @@ def print_prompt(text: str, flush=False):
         console.print(Panel(text, style="blue"))
     else:
         print("[PROMPT] " + text)
+
+
+def gemini_eyeballs(prompt: str, candidate: Path):
+
+    verdict = None
+    VALID_EXTS = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp"
+    }
+
+    queries = 0
+    model='gemini-2.5-flash'
+
+    with open(candidate, 'rb') as img:
+        image_bytes = img.read()
+
+    print_info("Consulting with my stooge, who has eyes")
+
+    try:
+        if queries > 4:
+            print_error("You've been asking a lot of my stooge. Please take a minute to reflect on your actions.")
+            time.sleep(10)
+            print_info("50...")
+            time.sleep(10)
+            print_info("40...")
+            time.sleep(10)
+            print_info("30...")
+            time.sleep(10)
+            print_info("20...")
+            time.sleep(10)
+            print_info("10...")
+            time.sleep(10)
+            queries = 0
+            return False
+        
+        client = genai.Client(api_key=GOOGLE_API_KEY)
+        response = client.models.generate_content(
+            model = model,
+            contents = [
+                types.Part.from_bytes(data=image_bytes, mime_type=VALID_EXTS[candidate.suffix.lower()]),
+                prompt
+            ]
+        )
+    
+        queries += 1
+        # if response.text == "yes":
+        #     return True
+        # elif response.text != "no":
+        #     print_info(f"My AI laborer is being unruly. They said {response.text} despite my clear instructions. Lemme try again.")
+    except errors.APIError as e:
+        if e.code == 429:
+            print_error("You've exhausted my stooge. I take this as a personal affront and will be committing suicide as a result. Good day.")
+            exit()
+    
+    except Exception as e:
+        print_error(f"Image compare error for {candidate.name}: {e}")
+        return None
+
+    return response.text
+
+
+
+def 
 
 
 
@@ -193,7 +257,7 @@ def set_folder_icon(folder, icon_path):
         subprocess.run(['ie4uinit.exe', '-ClearIconCache'], shell=True)
         
     except PermissionError as e:
-        print_error("Something fucked in setting the Altar Icon")
+        # print_error("Something fucked in setting the Altar Icon")
         pass
 
 
@@ -222,8 +286,9 @@ def ensure_altar(desktop: Path) -> Path:
     set_folder_icon(altar, ICON_PATH)
     return altar
 
+# endregion
 
-
+# region Challenges and Classes
 
 # -----------------------------
 # Challenge base class
@@ -291,11 +356,11 @@ class ChallengeFeedPDF(Challenge):
                         pages = len(reader.pages)
                         print_info(f"Found PDF '{p.name}' with {pages} pages.")
                         if pages > self.MIN_PAGES:
-                            page_2_text = reader.pages[1].extract_text()
+                            page_2_text = reader.pages[7].extract_text().lower()
                             if "chicken" in page_2_text:
                                 return True
                             else:
-                                print_error("Satisfactory in volume, but page 2 could use more chicken.")
+                                print_error("Satisfactory in volume, but page 8 could use more chicken.")
                                 os.remove(p)
                         else:
                             print_error("Offering too meager. I hunger for more pages.")
@@ -316,21 +381,11 @@ class ChallengeFeedPDF(Challenge):
 # We offload to AI.
 #
 # To remove advanced capability entirely: delete HAS_IMAGEHASH checks and the reference loading.
-
+# endregion
 class ChallengeFeedReindeerImage(Challenge):
     name = "A Sacrifice of Flesh"
-    description = (
-        "I hunger for the meat of the festive beast adorned with horns and bound to servitude at the helm of the fat man's carriage. Or an image of one."
-    )
-    VALID_EXTS = {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp"
-    }
+    description = "I hunger for the meat of the festive beast adorned with horns and bound to servitude at the helm of the fat man's carriage. Or an image of one."
     win_message = "yep that's a reindeer"
-
-
 
     def __init__(self):
         self.gemini_prompt = """You are part of a scripted workflow, and are responsible for image understanding.
@@ -340,6 +395,12 @@ class ChallengeFeedReindeerImage(Challenge):
         """
         self.model='gemini-2.5-flash'
         self.queries = 0
+        self.VALID_EXTS = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp"
+        }
 
 
     def check_image(self, candidate: Path) -> bool:
@@ -398,8 +459,10 @@ class ChallengeFeedReindeerImage(Challenge):
                 continue
             if p.suffix.lower() in self.VALID_EXTS:
 
+                image_check = gemini_eyeballs(self.gemini_prompt, p)
+
                 # Gemini check
-                if self.check_image(p):
+                if image_check and image_check[0] in "yY":
                     return True
                 else:
                     print_error("Nay, this beast or whatever displeases me. Please replace it posthaste.")
@@ -523,38 +586,44 @@ class ChallengePasswordGame(Challenge):
             "Password must start with a Roman Numeral.": [False, False],
             "Password must not contain any repeat characters.": [False, False],
         }
+        self.successful_password = "yuasehf oijasepnfo9ua09upaoiwejhfalkn"
 
 
-    def is_completed(self, altar_path: Path):
+    def is_completed(self, altar_path: Path, skip_await=False):
 
         # Try iterating through files in altar, if they're a text file then run through our rule evaluations
         for p in altar_path.iterdir():
             if p.is_file() and p.name != "desktop.ini":
                 # Block for change in file, catch file not found errors and run is_completed again to find the new filename.
                 try:
-                    print_info(f"that {p.name} file looks mighty interesting, I'm gonna sit and stare at that until it changes")
-                    await_file_change(p)
+                    if skip_await:
+                        print_info(f"Oop, looks like the filename changed to {p.name}, using that now")
+                    else:
+                        print_info(f"that {p.name} file looks mighty interesting, I'm gonna sit and stare at that until it changes")
+                        await_file_change(p)
                 except FileNotFoundError as e:
-                    return self.is_completed(altar_path)
+                    return self.is_completed(altar_path, True)
                 
+                print_prompt(f"Your password is {p.read_text()}")
                 
                 try:
-                    self.evaluate_rules(p) # Runs check for a rule, then sets bools appropriately
+                    matches = self.evaluate_rules(p) # Runs check for a rule, then sets bools appropriately
                 except:
                     continue
 
                 success = True
                 for i, (rule, bools) in enumerate(self.requirements.items()):
+                    time.sleep(.5)
                     if not bools[0]: # Rule is not met
                         success = False
                         if bools[1]: # Rule not met but it is shown
-                            print_error(f"{i+1}) " + rule)
+                            print_error(f"{i+1}) {rule}\n{matches[i]}") 
                         else: # Rule is not met and not shown
                             break # Fully jumps out of this block
 
                     else: # Rule is met
                         if bools[1]: # Rule is met and shown
-                            print_good(f"{i+1}) " + rule)
+                            print_good(f"{i+1}) {rule}\n{matches[i]}")
                         else: # Rule is met but not shown
                             continue
                     
@@ -571,13 +640,17 @@ class ChallengePasswordGame(Challenge):
                             rule_key = list(self.requirements)[i+1] # Grab rule string for the next requirement down the dictionary/list
                             self.requirements[rule_key][1] = True # Set bools[1] (i.e. Shown or not) to True, then return to the start of the 
                     except IndexError: # Next rule is out of bounds, i.e. we've iterated through all rules
-                        print_error("IndexError")
-                        pass
+                        break
 
                 if success:
-                    PASSWORD_GLOBAL = p.read_text().rstrip()
+                    self.win_message = f"Good password m8e"
+                    self.successful_password = p.read_text().rstrip()
+                
+                return success
 
-        return success
+
+    def on_complete(self):
+        return self.successful_password
 
 
     def evaluate_rules(self, path: Path):
@@ -586,63 +659,89 @@ class ChallengePasswordGame(Challenge):
         # Grab filename for use as well
         content = path.read_text().rstrip()
         lower_content = content.lower()
-        title = path.name
+        title = path.stem
+
+        matches = []
 
         for bools in list(self.requirements.values()):
             bools[0] = False
 
 
         # if list
-        if len(content) >= 8:
+        mat = len(content)
+        if mat >= 8:
             self.requirements["Password must be at least 8 characters long."][0] = True
+        matches.append(f"Password length: {mat}")
         
+        mat = re.search("[0-9]", content)
         if re.search("[0-9]", content):
             self.requirements["Password must contain a number."][0] = True
+        matches.append(f"Number identified: {mat[0] if mat else mat}")
 
-        if not re.fullmatch("[a-zA-Z0-9\\s]+", content): # i.e. Content is not just comprised of letters, numbers, and whitespace
+        mat = re.search("[^a-zA-Z0-9\\s]", content) # Find anything that's not a 
+        if mat:
             self.requirements["Password must include a special character."][0] = True
+        matches.append(f"Special character identified: {mat[0] if mat else mat}")
 
+
+        
         sum = 0
         for char in content:
             if char in "123456789":
                 sum += int(char)
         if sum == 25:
             self.requirements["Digits in your password must add up to 25."][0] = True
+        matches.append(f"Current sum: {sum}")
         
-        if re.search("(january|february|march|april|may|june|july|august|september|november|december)", lower_content):
+        mat = re.search("(january|february|march|april|may|june|july|august|september|november|december)", lower_content)
+        if mat:
             self.requirements["Password must include a month of the year."][0] = True
+        matches.append(f"Month identified: {mat[0] if mat else mat}")
 
-        if len(content) <= 18:
+        
+        mat = len(content)
+        if mat <= 18:
             self.requirements["Password must be at most 18 characters."][0] = True
+        matches.append(f"Password length: {mat}")
 
-        if "IX" in content:
+        mat = ("IX" in content)
+        if mat:
             self.requirements["Password must contain the Roman Numeral for 9."][0] = True
+        matches.append(mat)
 
-        if re.match("(dasher|dancer|prancer|vixen|comet|cupid|donner|blitzen|rudolph)", lower_content):
+        mat = re.match("(dasher|dancer|prancer|vixen|comet|cupid|donner|blitzen|rudolph)", lower_content)
+        if mat:
             self.requirements["Password must start with a reindeer."][0] = True
+        matches.append(f"Reindeer identified at beginning of password: {mat[0] if mat else mat}")
 
-        # Fix these two to account for .txt suffix (maybe p.prefix?)
         if title == content or title == content[::-1]:
             self.requirements["Password file must match the password, so I can remember it."][0] = True
+        matches.append(f"Current title: {title}")
 
         if title == content[::-1]:
             self.requirements["Keeping your password in a file named after the password is insecure, please reverse it in the file name to make it secret."][0] = True
+        matches.append(f"Current title: {title}")
 
-        if re.match("(I|V|X|L|M|C|D)", content):
+        mat = re.match("(I|V|X|L|M|C|D)", content)
+        if mat:
             self.requirements["Password must start with a Roman Numeral."][0] = True
+        matches.append(f"Roman numeral identified at beginning of password: {mat[0] if mat else mat}")
         
         char_list = []
+        repeat_list = []
         no_repeats = True
         for char in lower_content:
             if char not in char_list:
                 char_list.append(char)
             else:
                 no_repeats = False
-                break
+                if char not in repeat_list:
+                    repeat_list.append(char)
         self.requirements["Password must not contain any repeat characters."][0] = no_repeats
+        matches.append(f"Repeat offenders: {repeat_list}")
 
-        # Return null, since we're just modifying the self.requirements dict bools.
-        return
+        # Return a list of the matches/lens/etc that we can map to the rules
+        return matches
 
 
 
@@ -707,6 +806,8 @@ class ChallengeRunner:
 
     def run(self):
 
+        password = "wsedrfvbhoiasdf hoiuashfbokhunhh"
+
         for idx, ch in enumerate(self.challenges, 1):
             if HAS_RICH:
                 console.print(Panel(f"[bold]{ch.name}[/]\n\n{ch.description}", title=f"Challenge {idx}/{len(self.challenges)}"))
@@ -717,18 +818,20 @@ class ChallengeRunner:
             while True:
                 try:
                     if ch.is_completed(self.altar_path):
-                        ch.on_complete()
+                        result = ch.on_complete()
+                        if result:
+                            password = result
                         print_good(ch.win_message)
                         print_good(f"Tribulation conquered: {ch.name}\n")
                         # Optionally clear altar between challenges if you like:
-                        self._clear_altar_contents()
+                        # self._clear_altar_contents()
                         break
                     time.sleep(POLL_INTERVAL)
                 except KeyboardInterrupt:
                     print_error("Interrupted by user. Exiting.")
                     sys.exit(0)
 
-        final = "🎁 YOU'VE DONE WELL ENOUGH. CLAIM THY PRIZE. 🎁"
+        final = "🎁 YOU'VE DONE WELL ENOUGH. ENTER YOUR PASSWORD TO CONTINUE. 🎁"
         if HAS_RICH:
             console.rule(final)
         else:
@@ -736,8 +839,23 @@ class ChallengeRunner:
             print(final)
             print("=" * 60)
         
-        # time.sleep(5)
-        # webbrowser.open(WINNER_WEBPAGE)
+        entered_pass = ""
+        attempts_remaining = 3
+        while attempts_remaining >= 0:
+            try:
+                entered_pass = input(" >> ")
+                if entered_pass == password:
+                    webbrowser.open(WINNER_WEBPAGE)
+                    return
+                else:
+                    print_error(f"Incorrect. {attempts_remaining} attempts remaining.")
+                    attempts_remaining -= 1
+            except KeyboardInterrupt:
+                print_error("tsk tsk no ctrl+c on the command line")
+                continue
+
+        print_error("Ooh tough luck. Give it another go.")
+
 
     def _clear_altar_contents(self):
         """Optional utility to empty the altar between challenges. Use with caution."""
@@ -753,6 +871,9 @@ class ChallengeRunner:
             except Exception as e:
                 print_error(f"Failed to remove {p}: {e}")
 
+# endregion
+
+# region Main
 
 # -----------------------------
 # CLI / Main
@@ -773,17 +894,16 @@ def main():
         # ChallengeMathAnswer(),
 
         # Reindeer image recognition (OPTIONAL COMPONENT)
-        # ChallengeFeedReindeerImage(),
+        ChallengeFeedReindeerImage(),
         
-        # Password Challenge
-        ChallengePasswordGame(),
-
         # Speed Typing
         # ChallengeSpeedTyping(),
 
+        # Password Challenge
+        # ChallengePasswordGame(),
+
         # PDF page requirement (OPTIONAL COMPONENT)
         # ChallengeFeedPDF(),
-
 
         # Reflex Challenge
         # ChallengeReflexes(),
@@ -798,8 +918,9 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # TODO: Test Page Length in PyPDF2
-    # TODO: Test Checks in the Password Challenge
-    # TODO: Test Password Challenge Show/Pass logic
-    # TODO: Strip down Google GenAI imports
+    # TODO: More trials?
+    # TODO: XQC Clap Sound Effect on Tribulation complete
+    # TODO: Powershell wrapper
+    # TODO: ????
 
+# endregion
